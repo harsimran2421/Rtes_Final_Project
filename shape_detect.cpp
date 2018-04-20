@@ -35,9 +35,12 @@ using namespace cv;
  */
 
 /*initialising the semaphores*/
-
 sem_t service_2_sig, service_1_sig;
 
+cv::Mat imgOriginal;
+raspicam::RaspiCam_Cv Camera;
+cv::Mat src;
+cv::Mat bw;
 
 static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
 {
@@ -66,11 +69,6 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
   cv::rectangle(im, pt + cv::Point(0, baseline), pt + cv::Point(text.width, -text.height), CV_RGB(255,255,255), CV_FILLED);
   cv::putText(im, label, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
 }
-
-  cv::Mat imgOriginal;
-  raspicam::RaspiCam_Cv Camera;
-  cv::Mat src;
-  cv::Mat bw;
 
 void *camera_capture(void *args)
 {
@@ -214,8 +212,10 @@ int main(int argc, char **argv)
   sem_init(&service_2_sig,0,0);
   int heap_size = 210000; 
   int load_init_files = 1; 
-festival_initialize(load_init_files, heap_size); 
-festival_say_text("hello world creating threads"); 
+  festival_initialize(load_init_files, heap_size); 
+  festival_eval_command("(voice_kal_diphone)"); 
+  festival_say_text("hello world, creating threads...");
+  festival_say_file("./sampletextfile.txt"); 
   
 	pthread_create(&service_1, NULL, camera_capture, NULL);
   sem_post(&service_1_sig);
