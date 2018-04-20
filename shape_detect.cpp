@@ -13,6 +13,8 @@
 
 #include <raspicam/raspicam_cv.h>
 #include <cmath>
+#include </usr/include/festival/festival.h>
+
 
 #include <iostream>
 
@@ -31,6 +33,12 @@ using namespace cv;
  * Helper function to find a cosine of angle between vectors
  * from pt0->pt1 and pt0->pt2
  */
+
+/*initialising the semaphores*/
+
+sem_t service_2_sig, service_1_sig;
+
+
 static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
 {
   double dx1 = pt1.x - pt0.x;
@@ -59,10 +67,14 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
   cv::putText(im, label, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
 }
 
-void *service(void *args)
-{
   cv::Mat imgOriginal;
   raspicam::RaspiCam_Cv Camera;
+  cv::Mat src;
+  cv::Mat bw;
+
+void *camera_capture(void *args)
+{
+  sem_wait(&service_1_sig);
   Camera.set(CV_CAP_PROP_FRAME_WIDTH,320);
   Camera.set(CV_CAP_PROP_FRAME_HEIGHT,240);
   Camera.set(CV_CAP_PROP_BRIGHTNESS,50);
@@ -98,7 +110,6 @@ void *service(void *args)
   //cv::Mat src = cv::imread("polygon.png");
 
   //cv::Mat src = cv::imread("/home/pi/Desktop/test2/assets/basic_shapes.jpg");
-  cv::Mat src;
   imgOriginal.copyTo(src);
   if (src.empty())
   {		
@@ -113,10 +124,15 @@ void *service(void *args)
   cv::cvtColor(src, gray, CV_BGR2GRAY);
 
   // Use Canny instead of threshold to catch squares with gradient shading
-  cv::Mat bw;
   cv::Canny(gray, bw, 0, 50, 5);
+  sem_post(&service_2_sig);
+}
 
-  // Find contours
+
+void *shape_detection(void *args)
+{
+  sem_wait(&service_2_sig);
+    // Find contours
   std::vector<std::vector<cv::Point> > contours;
   cv::findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
@@ -192,8 +208,19 @@ void *service(void *args)
 
 int main(int argc, char **argv)
 {
-	pthread_t service_1;
-	pthread_create(&service_1, NULL, service, NULL);
+
+	pthread_t service_1, service_2;
+  sem_init(&service_1_sig,0,0);
+  sem_init(&service_2_sig,0,0);
+  int heap_size = 210000; 
+  int load_init_files = 1; 
+festival_initialize(load_init_files, heap_size); 
+festival_say_text("hello world creating threads"); 
+  
+	pthread_create(&service_1, NULL, camera_capture, NULL);
+  sem_post(&service_1_sig);
+	pthread_create(&service_2, NULL, shape_detection, NULL);
 	pthread_join(service_1,NULL);
+  pthread_join(service_2,NULL);
 	return 0;
 }
