@@ -15,7 +15,6 @@
 #include <cmath>
 #include </usr/include/festival/festival.h>
 
-
 #include <iostream>
 
 /*pthread header files*/
@@ -29,18 +28,33 @@
 using namespace std;
 using namespace cv;
 
+typedef enum __detect_shape_e {
+  SHAPE_RECT = 10,
+  SHAPE_TRI = 20,
+  SHAPE_CIRCLE = 30,
+  SHAPE_PENTA = 40,
+  SHAPE_HEXA = 50,
+  DEFAULT_SHAPE = 60
+} detect_shape_e;
+
 /**
  * Helper function to find a cosine of angle between vectors
  * from pt0->pt1 and pt0->pt2
  */
 
 /*initialising the semaphores*/
-sem_t service_2_sig, service_1_sig;
+sem_t service_shape_detect_sig, service_camera_cap_sig, service_shape_verify_sig;
 
 cv::Mat imgOriginal;
 raspicam::RaspiCam_Cv Camera;
 cv::Mat src;
 cv::Mat bw;
+
+char *error_string = "Wrong Shape, Try Again!";
+
+/* Global var that holds the shape detected */
+detect_shape_e shape = DEFAULT_SHAPE;
+uint8_t shape_order = 0;
 
 static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
 {
@@ -72,7 +86,8 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
 
 void *camera_capture(void *args)
 {
-  sem_wait(&service_1_sig);
+  sem_wait(&service_camera_cap_sig);
+  
   Camera.set(CV_CAP_PROP_FRAME_WIDTH,320);
   Camera.set(CV_CAP_PROP_FRAME_HEIGHT,240);
   Camera.set(CV_CAP_PROP_BRIGHTNESS,50);
@@ -103,7 +118,6 @@ void *camera_capture(void *args)
   imshow("image",imgOriginal);
   string imagename;
   imagename = "/home/pi/Desktop/test2/assests/basic_shapes2.jpg";	
-  cout << "BUP " << endl;
 
   //cv::Mat src = cv::imread("polygon.png");
 
@@ -116,21 +130,22 @@ void *camera_capture(void *args)
     //break;
   }
 
-
   // Convert to grayscale
   cv::Mat gray;
   cv::cvtColor(src, gray, CV_BGR2GRAY);
 
   // Use Canny instead of threshold to catch squares with gradient shading
   cv::Canny(gray, bw, 0, 50, 5);
-  sem_post(&service_2_sig);
+  
+  sem_post(&service_shape_detect_sig);
 }
 
 
 void *shape_detection(void *args)
 {
-  sem_wait(&service_2_sig);
-    // Find contours
+  sem_wait(&service_shape_detect_sig);
+    
+  // Find contours
   std::vector<std::vector<cv::Point> > contours;
   cv::findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
@@ -146,11 +161,12 @@ void *shape_detection(void *args)
     // Skip small or non-convex objects 
     if (std::fabs(cv::contourArea(contours[i])) < 100 || !cv::isContourConvex(approx))
       continue;
-    
+
     if	(approx.size() < 3) { //detects annything with three sides ==>needs to be looked at 
       cout << "none" <<endl;
       setLabel(dst, "NONE", contours[i]);    // Triangles
     } else if (approx.size() == 3) { //detects annything with three sides ==>needs to be looked at 
+      shape = SHAPE_TRI;
       setLabel(dst, "TRI", contours[i]);    // Triangles
     } else if (approx.size() >= 4 && approx.size() <= 6) {
 
@@ -172,17 +188,17 @@ void *shape_detection(void *args)
 
       // Use the degrees obtained above and the number of vertices
       // to determine the shape of the contour
-      if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3)
+      if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3) {
+        shape = SHAPE_RECT;
         setLabel(dst, "RECT", contours[i]);
-
-      else if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27)
+      } else if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27) {
+        shape = SHAPE_PENTA;
         setLabel(dst, "PENTA", contours[i]);
-
-      else if (vtc == 6 && mincos >= -0.55 && maxcos <= -0.45)
+      } else if (vtc == 6 && mincos >= -0.55 && maxcos <= -0.45) {
+        shape = SHAPE_HEXA;
         setLabel(dst, "HEXA", contours[i]);
-    } 
-    
-    else {
+      }
+    } else {
 
       // Detect and label circles
       double area = cv::contourArea(contours[i]);
@@ -190,37 +206,82 @@ void *shape_detection(void *args)
       cv::Rect r = cv::boundingRect(contours[i]);
       int radius = r.width / 2;
       if (std::abs(1 - ((double)r.width / r.height)) <= 0.2 &&
-          std::abs(1 - (area / (CV_PI * std::pow(radius, 2)))) <= 0.2)
-            setLabel(dst, "CIR", contours[i]);
+          std::abs(1 - (area / (CV_PI * std::pow(radius, 2)))) <= 0.2) {
+        shape = SHAPE_CIRCLE;  
+        setLabel(dst, "CIR", contours[i]);
+      }
     }
-
   }
-
-  cv::imshow("src", src);
+  
+  //cv::imshow("src", src);
   cv::imshow("dst", dst);
   cv::waitKey(0);
-  cout << "BUP BUP BUP " << endl;
+  
+  /* Increment the shapes detected by one only! */ 
+  shape_order++;
   //}
+  sem_post(&service_shape_verify_sig);
+}
 
+void *shape_verify(void *params)
+{
+  sem_wait(&service_shape_verify_sig);
+  printf("In threads: %s\n", __func__);
+  static uint8_t int_order = 10;
+  if(int_order == shape) {
+  //if((int_order%shape) == 0) {
+    printf("int_order: %d; shape: %d\n", int_order, shape);
+    int_order+= 10;
+    //sem_post(&service_4);
+    /* post and exit */
+  } else {
+    /* 1. Do an audio output indicating an error
+     * 2. Call the camera cap functions again! 
+     */
+   //festival_say_text(error_string);
+    printf("int_order: %d; shape: %d\n", int_order, shape);
+    
+    int heap_size = 210000; 
+    int load_init_files = 1; 
+    festival_initialize(load_init_files, heap_size); 
+    festival_eval_command("(voice_kal_diphone)"); 
+    festival_say_text("In function shape verify");
+  }
+
+  return NULL;
 }
 
 int main(int argc, char **argv)
 {
+  /* Create the services and the semaphores related to them */
+	pthread_t service_camera_cap, service_shape_detect, service_shape_verify;
+  sem_init(&service_camera_cap_sig,0,0);
+  sem_init(&service_shape_detect_sig,0,0);
+  sem_init(&service_shape_verify_sig,0,0);
+ 
+  /* Init. the TTS library */
+  //int heap_size = 210000; 
+  //int load_init_files = 1; 
+  //festival_initialize(load_init_files, heap_size); 
+  //festival_eval_command("(voice_kal_diphone)"); 
+  //festival_say_text("hello world, creating threads...");
+  //festival_say_file("./sampletextfile.txt"); 
+ 
+  /* Create the threads */
+	pthread_create(&service_camera_cap, NULL, camera_capture, NULL);
+  sem_post(&service_camera_cap_sig);
+	pthread_create(&service_shape_detect, NULL, shape_detection, NULL);
+	pthread_create(&service_shape_verify, NULL, shape_verify, NULL);
 
-	pthread_t service_1, service_2;
-  sem_init(&service_1_sig,0,0);
-  sem_init(&service_2_sig,0,0);
-  int heap_size = 210000; 
-  int load_init_files = 1; 
-  festival_initialize(load_init_files, heap_size); 
-  festival_eval_command("(voice_kal_diphone)"); 
-  festival_say_text("hello world, creating threads...");
-  festival_say_file("./sampletextfile.txt"); 
+  /* Wait for the threads to expire */
+  pthread_join(service_camera_cap,NULL);
+  pthread_join(service_shape_detect,NULL);
+  pthread_join(service_shape_verify,NULL);
+	
+  /* Destory the created semaphores */
+  sem_destroy(&service_camera_cap_sig);
+  sem_destroy(&service_shape_detect_sig);
+  sem_destroy(&service_shape_verify_sig);
   
-	pthread_create(&service_1, NULL, camera_capture, NULL);
-  sem_post(&service_1_sig);
-	pthread_create(&service_2, NULL, shape_detection, NULL);
-	pthread_join(service_1,NULL);
-  pthread_join(service_2,NULL);
-	return 0;
+  return 0;
 }
