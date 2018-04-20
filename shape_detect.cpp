@@ -20,6 +20,16 @@
 
 #include <iostream>
 
+/*pthread header files*/
+#include <errno.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+
+
 using namespace std;
 using namespace cv;
 
@@ -83,15 +93,12 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
 
 }
 
-
-
-int main()
-
+void *service(void *args)
 {
 	cv::Mat imgOriginal;
     	raspicam::RaspiCam_Cv Camera;
-    	Camera.set(CV_CAP_PROP_FRAME_WIDTH,640);
-	Camera.set(CV_CAP_PROP_FRAME_HEIGHT,480);
+    	Camera.set(CV_CAP_PROP_FRAME_WIDTH,320);
+	Camera.set(CV_CAP_PROP_FRAME_HEIGHT,240);
 	Camera.set(CV_CAP_PROP_BRIGHTNESS,50);
 	Camera.set(CV_CAP_PROP_CONTRAST,50);
 	Camera.set(CV_CAP_PROP_SATURATION,50);
@@ -104,7 +111,7 @@ int main()
     if ( !Camera.open())  // if not success, exit program
     {
          cout << "Cannot open the web cam" << endl;
-         return -1;
+         //return -1;
     }
    //while (true)
     //{  
@@ -129,7 +136,8 @@ cout << "BUP " << endl;
 	if (src.empty())
 {		
  	cout << "ended " << endl;
-		return -1;
+		//return -1;
+		//break;
 }
 
 
@@ -181,10 +189,10 @@ cout << "BUP " << endl;
 
 			continue;
 
-		 if (approx.size() < 3)//detects annything with three sides ==>needs to be looked at 
+		if	(approx.size() < 3)//detects annything with three sides ==>needs to be looked at 
 
 		{
-
+			cout << "none" <<endl;
 			setLabel(dst, "NONE", contours[i]);    // Triangles
 
 		}
@@ -282,6 +290,14 @@ cout << "BUP " << endl;
 
 	cv::waitKey(0);
  	cout << "BUP BUP BUP " << endl;
-	return 0;
 //}
+
+}
+
+int main()
+{
+	pthread_t service_1;
+	pthread_create(&service_1, NULL, service, NULL);
+	pthread_join(service_1,NULL);
+	return 0;
 }
