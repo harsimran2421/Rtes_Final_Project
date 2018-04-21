@@ -25,6 +25,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include<signal.h>
+
 using namespace std;
 using namespace cv;
 
@@ -283,9 +285,17 @@ void *audio_output(void *params)
   return NULL;
 }
 
+void intHandler(int dummy) {
+  cout<<"Signal Handler Caught!"<<endl;  
+  exit(0);
+}
+
 
 int main(int argc, char **argv)
 {
+
+  signal(SIGINT, intHandler);
+
   /* Create the services and the semaphores related to them */
 	pthread_t service_camera_cap, service_shape_detect, service_shape_verify, service_audio_output;
   sem_init(&service_camera_cap_sig,0,0);
