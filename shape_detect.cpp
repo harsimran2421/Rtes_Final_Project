@@ -43,8 +43,9 @@ typedef enum __detect_shape_e {
  */
 
 /*initialising the semaphores*/
-sem_t service_shape_detect_sig, service_camera_cap_sig, service_shape_verify_sig;
+sem_t service_shape_detect_sig, service_camera_cap_sig, service_shape_verify_sig, service_audio_sig;
 
+/*gloabal variables for image capturing and processing*/
 cv::Mat imgOriginal;
 raspicam::RaspiCam_Cv Camera;
 cv::Mat src;
@@ -225,48 +226,72 @@ void *shape_detection(void *args)
     sem_post(&service_shape_verify_sig);
   }
 }
+bool verified = false;
 
 void *shape_verify(void *params)
 {
-  int heap_size = 210000; 
-  int load_init_files = 1; 
-  festival_initialize(load_init_files, heap_size); 
-  festival_eval_command("(voice_kal_diphone)"); 
-  
+  static uint8_t int_order = 10;
   while(1) 
   {
     sem_wait(&service_shape_verify_sig);
     //printf("In threads: %s\n", __func__);
-    static uint8_t int_order = 10;
     if(int_order == shape) {
       printf("int_order: %d; shape: %d\n", int_order, shape);
+      verified = true;
       int_order+= 10;
-      //sem_post(&service_4);
-      
-      //festival_say_text("In function shape verify, valid condition");
-      exit(0);
+      //exit(0);
       /* post and exit */
     } else {
       /* 1. Do an audio output indicating an error
        * 2. Call the camera cap functions again! 
        */
-      festival_say_text(error_string);
       printf("int_order: %d; shape: %d\n", int_order, shape);
-
-      sem_post(&service_camera_cap_sig);
+      verified = false;
     }
+    
+      sem_post(&service_audio_sig);
+      //festival_say_text("In function shape verify, valid condition");
   }
     return NULL;
 }
 
+
+void *audio_output(void *params)
+{   
+    int heap_size = 210000; 
+    int load_init_files = 3; 
+    festival_initialize(2, heap_size); 
+    festival_eval_command("(voice_kal_diphone)");  
+  while(1)
+  {
+    sem_wait(&service_audio_sig);
+    
+    //if(shape==SHAPE_RECT)
+    if(shape==SHAPE_TRI && verified == true)
+      festival_say_file("./audiopart1.txt"); 
+    else if(shape==SHAPE_TRI && verified == true)
+      festival_say_file("./audiopart2.txt"); 
+    else if(shape==SHAPE_CIRCLE && verified == true)
+      festival_say_file("./audiopart3.txt"); 
+    else if(shape==SHAPE_PENTA && verified == true)
+      festival_say_file("./audiopart4.txt"); 
+    else if(verified == false)
+      festival_say_text(error_string);
+  
+    sem_post(&service_camera_cap_sig);
+  }
+  return NULL;
+}
+
+
 int main(int argc, char **argv)
 {
   /* Create the services and the semaphores related to them */
-	pthread_t service_camera_cap, service_shape_detect, service_shape_verify;
+	pthread_t service_camera_cap, service_shape_detect, service_shape_verify, service_audio_output;
   sem_init(&service_camera_cap_sig,0,0);
   sem_init(&service_shape_detect_sig,0,0);
   sem_init(&service_shape_verify_sig,0,0);
- 
+  sem_init(&service_audio_sig,0,0);
   /* Init. the TTS library */
   //int heap_size = 210000; 
   //int load_init_files = 1; 
@@ -274,22 +299,24 @@ int main(int argc, char **argv)
   //festival_eval_command("(voice_kal_diphone)"); 
   //festival_say_text("hello world, creating threads...");
   //festival_say_file("./sampletextfile.txt"); 
- 
+
   /* Create the threads */
 	pthread_create(&service_camera_cap, NULL, camera_capture, NULL);
-  sem_post(&service_camera_cap_sig);
 	pthread_create(&service_shape_detect, NULL, shape_detection, NULL);
 	pthread_create(&service_shape_verify, NULL, shape_verify, NULL);
+	pthread_create(&service_audio_output, NULL, audio_output, NULL);
+  sem_post(&service_camera_cap_sig);
 
   /* Wait for the threads to expire */
   pthread_join(service_camera_cap,NULL);
   pthread_join(service_shape_detect,NULL);
   pthread_join(service_shape_verify,NULL);
+  pthread_join(service_audio_output,NULL);
 	
   /* Destory the created semaphores */
   sem_destroy(&service_camera_cap_sig);
   sem_destroy(&service_shape_detect_sig);
   sem_destroy(&service_shape_verify_sig);
-  
+  sem_destroy(&service_audio_sig);
   return 0;
 }
