@@ -79,7 +79,9 @@ unsigned char disp1[10][8]={
   {0x3E,0x22,0x22,0x3E,0x2,0x2,0x2,0x3E},//9
 };
 /*global variable to pass the number of sides to led_mat thread*/
-int sides = 0;
+int sides = 2;
+int prio_Max = 0;
+int prio_Min = 0;
 
 
 char *error_string = "Wrong Shape, Try Again!";
@@ -202,8 +204,6 @@ void *camera_capture(void *args)
   while(1) { 
     sem_wait(&service_camera_cap_sig);
   
-    gettimeofday(&start, (struct timezone *)0);
-
     bool bSuccess = Camera.grab(); // read a new frame from video
 
     if (!bSuccess) //if not success, break loop
@@ -236,10 +236,7 @@ void *camera_capture(void *args)
     // Use Canny instead of threshold to catch squares with gradient shading
     cv::Canny(gray, bw, 0, 50, 5);
     cv::waitKey(3); 
-    gettimeofday(&stop, (struct timezone *)0);
     
-    time_executed_us =((stop.tv_sec - start.tv_sec)*1000000) + ((stop.tv_usec - start.tv_usec));
-    printf("Service_1 time: %d\n", time_executed_us);
     n++;
     sem_post(&service_shape_detect_sig);
     
@@ -253,11 +250,11 @@ void *shape_detection(void *args)
   struct timeval stop;
   unsigned long int time_executed_us = 0;
   double current_time;
+  static detect_shape_e prev_shape = DEFAULT_SHAPE; 
 
 
   while(1) {
     sem_wait(&service_shape_detect_sig);
-    gettimeofday(&start, (struct timezone *)0);
 
     // Find contours
     std::vector<std::vector<cv::Point> > contours;
@@ -339,12 +336,13 @@ void *shape_detection(void *args)
 
     /* Increment the shapes detected by one only! */ 
     shape_order++;
-    gettimeofday(&stop, (struct timezone *)0);
     
-    time_executed_us =((stop.tv_sec - start.tv_sec)*1000000) + ((stop.tv_usec - start.tv_usec));
-    printf("Service_2 time: %d\n", time_executed_us);
- 
-    sem_post(&service_shape_verify_sig);
+    if(prev_shape != shape) {
+      sem_post(&service_shape_verify_sig);
+      prev_shape = shape;
+    } else {
+      sem_post(&service_camera_cap_sig);
+    }
   }
 }
 bool verified = false;
@@ -361,21 +359,15 @@ void *shape_verify(void *params)
   while(1) 
   {
     sem_wait(&service_shape_verify_sig);
-    //printf("In threads: %s\n", __func__);
-    gettimeofday(&start, (struct timezone *)0);
 
 #ifdef EXIT   
     if(int_order == shape) {
-      //printf("int_order: %d; shape: %d\n", int_order, shape);
       verified = true;
       int_order+= 10;
-      //exit(0);
-      /* post and exit */
     } else {
       /* 1. Do an audio output indicating an error
        * 2. Call the camera cap functions again! 
        */
-    //  printf("int_order: %d; shape: %d\n", int_order, shape);
       verified = false;
     }
 #endif
@@ -396,22 +388,13 @@ void *shape_verify(void *params)
       else if(shape==SHAPE_HEXA && verified == true)
         sides = 6; 
       sem_post(&service_led_mat_sig);
-       delay(100);
     }
     else
     {
        verified = false;
       sem_post(&service_led_mat_sig);
-       delay(100);
     }
 
-
-
-    gettimeofday(&stop, (struct timezone *)0);
-    time_executed_us =((stop.tv_sec - start.tv_sec)*1000000) + ((stop.tv_usec - start.tv_usec));
-    printf("Service_3 time: %d\n", time_executed_us);
-   
-      //festival_say_text("In function shape verify, valid condition");
   }
     return NULL;
 }
@@ -419,20 +402,12 @@ void *shape_verify(void *params)
 void *led_matrix(void *params)
 {
   int side1;
-    //if (wiringPiSetup () == -1) exit (1) ;
-    //setup_led();
     while(1)
     {
       sem_wait(&service_led_mat_sig);
-      cout << sides << endl; 
-      // if(side1 != sides)
-      // {
-      //sides = 5;
-      delay(600);
+      delay(500);
       printnumber(sides);
-      delay(600);
-      // }
-      // side1 = sides; 
+      delay(500);
       sem_post(&service_audio_sig);
     }
   return NULL; 
@@ -445,7 +420,6 @@ void *audio_output(void *params)
     struct timeval stop;
     unsigned long int time_executed_us = 0;
     double current_time;
-
   
     int heap_size = 210000; 
     int load_init_files = 3; 
@@ -454,7 +428,6 @@ void *audio_output(void *params)
   while(1)
   {
     sem_wait(&service_audio_sig);
-    gettimeofday(&start, (struct timezone *)0);
 
     //if(shape==SHAPE_RECT)
     if(shape==SHAPE_RECT && verified == true)
@@ -474,11 +447,6 @@ void *audio_output(void *params)
     else if(verified == false)
       festival_say_text("error");
 
-    gettimeofday(&stop, (struct timezone *)0);
-
-    time_executed_us =((stop.tv_sec - start.tv_sec)*1000000) + ((stop.tv_usec - start.tv_usec));
-    printf("Service_4 time: %d\n", time_executed_us);
-    delay(100);
     sem_post(&service_camera_cap_sig);
   }
   return NULL;
@@ -488,34 +456,52 @@ void intHandler(int dummy) {
   cout<<"Signal Handler Caught!"<<endl;  
   exit(0);
 }
-#if 0
-int main()
+
+pthread_attr_t camera_thread_attr, shape_detect_attr, shape_verify_attr, audio_attr, led_mat_attr; 
+
+struct sched_param camera_thread_param, shape_detect_thread_param, shape_verify_thread_param,\
+                     audio_thread_param, led_mat_thread_param; 
+
+void set_thread_attr(void)
 {
-	pthread_t service_led_mat;
-  
-  sem_init(&service_led_mat_sig,0,0);
-
-  if (wiringPiSetup () == -1) exit (1) ;
-  pinMode(DATA, OUTPUT);  
-  pinMode(CLOCK, OUTPUT);
-  pinMode(LOAD, OUTPUT);  
-
-  setup_led();
-
-  pthread_create(&service_led_mat, NULL, led_matrix, NULL);
-  
-  sem_post(&service_led_mat_sig);
-  
-  pthread_join(service_led_mat, NULL);
-  
-  return 0;
+    pthread_attr_init(&camera_thread_attr); 
+    pthread_attr_setinheritsched(&camera_thread_attr, PTHREAD_EXPLICIT_SCHED); 
+    pthread_attr_setschedpolicy(&camera_thread_attr, SCHED_FIFO); 
+    camera_thread_param.sched_priority = prio_Max; 
+    pthread_attr_setschedparam(&camera_thread_attr, &camera_thread_param); 
+    
+    pthread_attr_init(&shape_detect_attr); 
+    pthread_attr_setinheritsched(&shape_detect_attr, PTHREAD_EXPLICIT_SCHED); 
+    pthread_attr_setschedpolicy(&shape_detect_attr, SCHED_FIFO); 
+    shape_detect_thread_param.sched_priority = prio_Max; 
+    pthread_attr_setschedparam(&shape_detect_attr, &shape_detect_thread_param); 
+    
+    pthread_attr_init(&shape_verify_attr); 
+    pthread_attr_setinheritsched(&shape_verify_attr, PTHREAD_EXPLICIT_SCHED); 
+    pthread_attr_setschedpolicy(&shape_verify_attr, SCHED_FIFO); 
+    shape_verify_thread_param.sched_priority = prio_Max; 
+    pthread_attr_setschedparam(&shape_verify_attr, &shape_verify_thread_param); 
+    
+    pthread_attr_init(&audio_attr); 
+    pthread_attr_setinheritsched(&audio_attr, PTHREAD_EXPLICIT_SCHED); 
+    pthread_attr_setschedpolicy(&audio_attr, SCHED_FIFO); 
+    audio_thread_param.sched_priority = prio_Max; 
+    pthread_attr_setschedparam(&audio_attr, &audio_thread_param); 
+    
+    pthread_attr_init(&led_mat_attr); 
+    pthread_attr_setinheritsched(&led_mat_attr, PTHREAD_EXPLICIT_SCHED); 
+    pthread_attr_setschedpolicy(&led_mat_attr, SCHED_FIFO); 
+    led_mat_thread_param.sched_priority = prio_Max; 
+    pthread_attr_setschedparam(&led_mat_attr, &led_mat_thread_param); 
 }
-#endif
-#if 1
+
 int main(int argc, char **argv)
 {
 
   signal(SIGINT, intHandler);
+  
+  prio_Max = sched_get_priority_max(SCHED_FIFO); 
+  prio_Min = sched_get_priority_min(SCHED_FIFO); 
   
   /* Create the services and the semaphores related to them */
 	pthread_t service_camera_cap, service_shape_detect, service_shape_verify, service_audio_output, service_led_mat;
@@ -529,22 +515,15 @@ int main(int argc, char **argv)
   pinMode(DATA, OUTPUT);  
   pinMode(CLOCK, OUTPUT);
   pinMode(LOAD, OUTPUT);  
- /* Init. the TTS library */
-  //int heap_size = 210000; 
-  //int load_init_files = 1; 
-  //festival_initialize(load_init_files, heap_size); 
-  //festival_eval_command("(voice_kal_diphone)"); 
-  //festival_say_text("hello world, creating threads...");
-  //festival_say_file("./sampletextfile.txt"); 
 
   setup_led();
 
   /* Create the threads */
-	pthread_create(&service_camera_cap, NULL, camera_capture, NULL);
-	pthread_create(&service_shape_detect, NULL, shape_detection, NULL);
-	pthread_create(&service_shape_verify, NULL, shape_verify, NULL);
-	pthread_create(&service_audio_output, NULL, audio_output, NULL);
-  pthread_create(&service_led_mat, NULL, led_matrix, NULL);
+  pthread_create(&service_camera_cap, &camera_thread_attr, camera_capture, NULL);
+	pthread_create(&service_shape_detect, &shape_detect_attr, shape_detection, NULL);
+	pthread_create(&service_shape_verify, &shape_verify_attr, shape_verify, NULL);
+	pthread_create(&service_audio_output, &audio_attr, audio_output, NULL);
+  pthread_create(&service_led_mat, &led_mat_attr, led_matrix, NULL);
   sem_post(&service_camera_cap_sig);
 
   /* Wait for the threads to expire */
@@ -562,4 +541,3 @@ int main(int argc, char **argv)
   sem_destroy(&service_led_mat_sig);
   return 0;
 }
-#endif
