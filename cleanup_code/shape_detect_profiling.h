@@ -1,48 +1,5 @@
-#include <opencv2/highgui/highgui.hpp>
+#include "header_files.h"
 
-#include <opencv2/imgproc/imgproc.hpp>
-
-#include <opencv2/core/core.hpp>
-#include <opencv2/video/video.hpp>
-
-#include <raspicam/raspicam_cv.h>
-#include <cmath>
-#include </usr/include/festival/festival.h>
-
-#include <iostream>
-
-/*pthread header files*/
-#include <errno.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h> 
-#include <sys/time.h> 
-#include <stdlib.h> 
-#include <stdio.h>
-#include <signal.h>
-#include <stdint.h>
-//#include "shit_header_file.h"
-
-/*header file for wiring pi*/
-#include <wiringPi.h>
-
-#define DATA        0 // GPIO 17 (WiringPi pin num 0)  header pin 11
-#define CLOCK       3 // GPIO 22 (WiringPi pin num 3)   header pin 15
-#define LOAD        4 // GPIO 23 (WiringPi pin num 4)   header pin 16
-
-#define deadlinecamera_capture 120000
-#define deadline_shape_detect 400000
-#define deadline_shape_verify 10
-#define deadline_audio 1300000
-#define deadline_led_mat 200000 
-
-#define NSEC_PER_SEC 1000000000
-
-#define HRES 640
-#define VRES 480
 
 using namespace std;
 using namespace cv;
@@ -94,6 +51,16 @@ char *error_string = "Wrong Shape, Try Again!";
 /* Global var that holds the shape detected */
 detect_shape_e shape = SHAPE_CIRCLE;
 uint8_t shape_order = 0;
+
+static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
+{
+  double dx1 = pt1.x - pt0.x;
+  double dy1 = pt1.y - pt0.y;
+  double dx2 = pt2.x - pt0.x;
+  double dy2 = pt2.y - pt0.y;
+
+  return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
+}
 
 /***********************************************
 Arrays for storing jitter   
@@ -176,3 +143,15 @@ static struct timespec delta_t = {0,0};
 //long delta_time = 0;
 long milliseconds_time = 0; 
 uint8_t noofframes = 20; 
+
+int delta_time(struct timespec* stop, struct timespec* start, struct timespec* delta);
+
+void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& contour);
+
+static void Send16bits (unsigned short output);
+
+static void MAX7219Send (unsigned char reg_number, unsigned char dataout);
+
+void setup_led();
+
+void printnumber(int i);
