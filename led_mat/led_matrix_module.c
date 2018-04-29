@@ -8,8 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-
-
+#include <pthread.h>
+#include <sys/time.h> 
+#include <semaphore.h>
      // define our pins :
 
 #define DATA        0 // GPIO 17 (WiringPi pin num 0)  header pin 11
@@ -25,7 +26,7 @@
 #define SHUTDOWN      0x0c                        
 #define DISPLAY_TEST  0x0f                         
 
-
+sem_t service;
 
 static void Send16bits (unsigned short output)
 {
@@ -63,7 +64,7 @@ static void MAX7219Send (unsigned char reg_number, unsigned char dataout)
 }
 
 
-unsigned char disp1[10][8]={
+unsigned char disp1[11][8]={
   {0x3C,0x42,0x42,0x42,0x42,0x42,0x42,0x3C},//0
   {0x10,0x30,0x50,0x10,0x10,0x10,0x10,0x10},//1
   {0x7E,0x2,0x2,0x7E,0x40,0x40,0x40,0x7E},//2
@@ -74,6 +75,7 @@ unsigned char disp1[10][8]={
   {0x3E,0x22,0x4,0x8,0x8,0x8,0x8,0x8},//7
   {0x0,0x3E,0x22,0x22,0x3E,0x22,0x22,0x3E},//8
   {0x3E,0x22,0x22,0x3E,0x2,0x2,0x2,0x3E},//9
+  {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},//9
 };
 
 void setup_led()
@@ -91,12 +93,25 @@ void printnumber(int i)
   {
     MAX7219Send(j, disp1[i][j-1]);
   }
-  delay(5000);
+  delay(50);
 }
 
+int k = 0;
+void *led_mat(void *params)
+{
+  while(1)
+  {
+    sem_wait(&service);
+    printnumber(k);
+    //printnumber(11);
+  }
+  return 0;
+}
 int main (void)
 {
 
+  pthread_t service_led_mat;
+  sem_init(&service,0,0);
   printf ("\n\nRaspberry Pi Max7219 Test using WiringPi\n\n");
 
   if (wiringPiSetup () == -1) exit (1) ;
@@ -117,10 +132,13 @@ int main (void)
   */
   
   setup_led();
-
-  printnumber(5);
-
+  pthread_create(&service_led_mat, 0 , led_mat, 0);
+  for(k = 0; k <9 ;k++)
+  {
+    sem_post(&service);
+    delay(100);
+  }
+    pthread_join(service_led_mat,NULL);
   //MAX7219Send(1,6);      // displays the number 6 on digit 1
-
   return 0;
 }

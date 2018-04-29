@@ -276,11 +276,12 @@ void *shape_detection(void *args)
       if	(approx.size() < 3) { //detects annything with three sides ==>needs to be looked at 
         cout << "none" <<endl;
         setLabel(dst, "NONE", contours[i]);    // Triangles
-      } else if (approx.size() == 3) { //detects annything with three sides ==>needs to be looked at 
+      } 
+      /*else if (approx.size() == 3) { //detects annything with three sides ==>needs to be looked at 
         shape = SHAPE_TRI;
         setLabel(dst, "TRI", contours[i]);    // Triangles
         //sides = 3;
-      } else if (approx.size() >= 4 && approx.size() <= 6) {
+      }*/ else if (approx.size() >= 4 && approx.size() <= 6) {
 
         // Number of vertices of polygonal curve
         int vtc = approx.size();
@@ -313,6 +314,9 @@ void *shape_detection(void *args)
           setLabel(dst, "HEXA", contours[i]);
           //sides = 6;
         }
+      } else if (approx.size() == 3) { //detects annything with three sides ==>needs to be looked at 
+        shape = SHAPE_TRI;
+        setLabel(dst, "TRI", contours[i]);    // Triangles
       } else {
 
         // Detect and label circles
