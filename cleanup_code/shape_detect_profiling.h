@@ -1,18 +1,7 @@
 #include "header_files.h"
 
-
 using namespace std;
 using namespace cv;
-
-typedef enum __detect_shape_e {
-  SHAPE_RECT = 10,
-  SHAPE_TRI = 20,
-  SHAPE_CIRCLE = 30,
-  SHAPE_PENTA = 40,
-  SHAPE_HEXA = 50,
-  DEFAULT_SHAPE = 60
-} detect_shape_e;
-
 /**
  * Helper function to find a cosine of angle between vectors
  * from pt0->pt1 and pt0->pt2
@@ -49,18 +38,7 @@ int prio_Min = 0;
 char *error_string = "Wrong Shape, Try Again!";
 
 /* Global var that holds the shape detected */
-detect_shape_e shape = SHAPE_CIRCLE;
 uint8_t shape_order = 0;
-
-static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
-{
-  double dx1 = pt1.x - pt0.x;
-  double dy1 = pt1.y - pt0.y;
-  double dx2 = pt2.x - pt0.x;
-  double dy2 = pt2.y - pt0.y;
-
-  return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
-}
 
 /***********************************************
 Arrays for storing jitter   
@@ -75,74 +53,79 @@ float led_mat_jitter[100];
 jitter analysis variables for all three transforms
 ***********************************************/
 /*camera_capture*/ 
-static float avg_execution_camera_capture = 0; 
-static float total_execution_camera_capture = 0;
-static float avg_jitter_camera_capture = 0; 
-static float total_jitter_camera_capture = 0; 
-static float avg_pjitter_camera_capture = 0; 
-static float total_pjitter_camera_capture = 0; 
-static float avg_njitter_camera_capture = 0; 
-static float total_njitter_camera_capture = 0; 
-static uint32_t count_pjitter_camera_capture = 0; 
-static uint32_t count_njitter_camera_capture = 0; 
+float avg_execution_camera_capture = 0; 
+float total_execution_camera_capture = 0;
+float avg_jitter_camera_capture = 0; 
+float total_jitter_camera_capture = 0; 
+float avg_pjitter_camera_capture = 0; 
+float total_pjitter_camera_capture = 0; 
+float avg_njitter_camera_capture = 0; 
+float total_njitter_camera_capture = 0; 
+uint32_t count_pjitter_camera_capture = 0; 
+uint32_t count_njitter_camera_capture = 0; 
 
 /*shape_verify*/ 
-static float avg_execution_shape_verify = 0; 
-static float total_execution_shape_verify = 0; 
-static float avg_jitter_shape_verify = 0; 
-static float total_jitter_shape_verify = 0; 
-static float avg_pjitter_shape_verify = 0; 
-static float total_njitter_shape_verify = 0; 
-static float avg_njitter_shape_verify = 0; 
-static float total_pjitter_shape_verify = 0; 
-static uint32_t count_pjitter_shape_verify = 0; 
-static uint32_t count_njitter_shape_verify = 0; 
+float avg_execution_shape_verify = 0; 
+float total_execution_shape_verify = 0; 
+float avg_jitter_shape_verify = 0; 
+float total_jitter_shape_verify = 0; 
+float avg_pjitter_shape_verify = 0; 
+float total_njitter_shape_verify = 0; 
+float avg_njitter_shape_verify = 0; 
+float total_pjitter_shape_verify = 0; 
+uint32_t count_pjitter_shape_verify = 0; 
+uint32_t count_njitter_shape_verify = 0; 
 
 /*shape_detect*/
-static float avg_execution_shape_detect = 0; 
-static float total_execution_shape_detect = 0; 
-static float avg_jitter_shape_detect = 0; 
-static float total_jitter_shape_detect = 0; 
-static float avg_pjitter_shape_detect = 0; 
-static float total_pjitter_shape_detect = 0; 
-static float avg_njitter_shape_detect = 0; 
-static float total_njitter_shape_detect = 0; 
-static uint32_t count_pjitter_shape_detect = 0; 
-static uint32_t count_njitter_shape_detect = 0; 
+float avg_execution_shape_detect = 0; 
+float total_execution_shape_detect = 0; 
+float avg_jitter_shape_detect = 0; 
+float total_jitter_shape_detect = 0; 
+float avg_pjitter_shape_detect = 0; 
+float total_pjitter_shape_detect = 0; 
+float avg_njitter_shape_detect = 0; 
+float total_njitter_shape_detect = 0; 
+uint32_t count_pjitter_shape_detect = 0; 
+uint32_t count_njitter_shape_detect = 0; 
 
 /*Audio*/
-static float avg_execution_audio = 0; 
-static float total_execution_audio = 0; 
-static float avg_jitter_audio = 0; 
-static float total_jitter_audio = 0; 
-static float avg_pjitter_audio = 0; 
-static float total_pjitter_audio = 0; 
-static float avg_njitter_audio = 0; 
-static float total_njitter_audio = 0; 
-static uint32_t count_pjitter_audio = 0; 
-static uint32_t count_njitter_audio = 0; 
+float avg_execution_audio = 0; 
+float total_execution_audio = 0; 
+float avg_jitter_audio = 0; 
+float total_jitter_audio = 0; 
+float avg_pjitter_audio = 0; 
+float total_pjitter_audio = 0; 
+float avg_njitter_audio = 0; 
+float total_njitter_audio = 0; 
+uint32_t count_pjitter_audio = 0; 
+uint32_t count_njitter_audio = 0; 
 
 /*led matrix*/
-static float avg_execution_led_mat = 0; 
-static float total_execution_led_mat = 0; 
-static float avg_jitter_led_mat = 0; 
-static float total_jitter_led_mat = 0; 
-static float avg_pjitter_led_mat = 0; 
-static float total_pjitter_led_mat = 0; 
-static float avg_njitter_led_mat = 0; 
-static float total_njitter_led_mat = 0; 
-static uint32_t count_pjitter_led_mat = 0; 
-static uint32_t count_njitter_led_mat = 0; 
+float avg_execution_led_mat = 0; 
+float total_execution_led_mat = 0; 
+float avg_jitter_led_mat = 0; 
+float total_jitter_led_mat = 0; 
+float avg_pjitter_led_mat = 0; 
+float total_pjitter_led_mat = 0; 
+float avg_njitter_led_mat = 0; 
+float total_njitter_led_mat = 0; 
+uint32_t count_pjitter_led_mat = 0; 
+uint32_t count_njitter_led_mat = 0; 
 
 /***********************************************
 variables used for profiling of frame captures
 ***********************************************/
-static struct timespec start_time = {0,0};
-static struct timespec end_time = {0,0};
-static struct timespec delta_t = {0,0};
+struct timespec start_time = {0,0};
+struct timespec end_time = {0,0};
+struct timespec delta_t = {0,0};
 //long delta_time = 0;
 long milliseconds_time = 0; 
 uint8_t noofframes = 20; 
+
+pthread_attr_t camera_thread_attr, shape_detect_attr, shape_verify_attr, audio_attr, led_mat_attr; 
+
+struct sched_param camera_thread_param, shape_detect_thread_param, shape_verify_thread_param,\
+                     audio_thread_param, led_mat_thread_param; 
 
 int delta_time(struct timespec* stop, struct timespec* start, struct timespec* delta);
 
@@ -155,3 +138,17 @@ static void MAX7219Send (unsigned char reg_number, unsigned char dataout);
 void setup_led();
 
 void printnumber(int i);
+
+void set_thread_attr(void);
+
+void *camera_capture(void *args);
+
+void *shape_detection(void *args);
+
+void *shape_verify(void *params);
+
+void *led_matrix(void *params);
+
+void *audio_output(void *params);
+
+static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0);
