@@ -87,13 +87,13 @@ int main(int argc, char **argv)
     printf("Frame No | Camera Service | Shape Detection Service | Shape Verification Service | Audio Service | Led Matrix Serivce\n");  
     for( uint8_t l = 0; l<20; l++)
     {
-      printf(" %d       | %0.2f                       | %0.2f                       | %0.2f                  |%0.2f                 |%0.2f\n", l, camera_capture_jitter[l], shape_detect_jitter[l], shape_verify_jitter[l], audio_jitter[l], led_mat_jitter[l]); 
+      printf(" %d       | %0.2f              | %0.2f             | %0.2f              |%0.2f             |%0.2f\n", l, camera_capture_jitter[l], shape_detect_jitter[l], shape_verify_jitter[l], audio_jitter[l], led_mat_jitter[l]); 
     }
 
     printf("\n\n---------------------------------------------------------\n");
     printf("Frame No | Camera Service | Shape Detection Service | Shape Verification Service | Audio Service | Led Matrix Serivce\n");  
 
-    printf("Avg Execution Time |%0.2f                       |%0.2f                        |%0.2f                |%0.2f                |%0.2f\nAvg Jitter         |%0.2f                        |%0.2f                       |%0.2f                |%0.2f                |%0.2f\nAvg Positive Jitter|%0.2f                        |%0.2f                       |%0.2f                |%0.2f            |%0.2f\nAvg Negative Jitter|%0.2f                        |%0.2f                       |%0.2f          |%0.2f              |%0.2f\n", avg_execution_camera_capture, avg_execution_shape_detect, avg_execution_shape_verify, avg_execution_audio, avg_execution_led_mat, avg_jitter_camera_capture, avg_jitter_shape_detect, avg_jitter_shape_verify, avg_jitter_audio, avg_jitter_led_mat, avg_pjitter_camera_capture, avg_pjitter_shape_detect, avg_pjitter_shape_verify, avg_pjitter_audio,avg_pjitter_led_mat, avg_njitter_camera_capture, avg_njitter_shape_detect, avg_njitter_shape_verify, avg_njitter_audio, avg_njitter_led_mat); 
+    printf("Avg Execution Time |%0.2f          |%0.2f             |%0.2f              |%0.2f            |%0.2f\nAvg Jitter         |%0.2f                |%0.2f                |%0.2f                |%0.2f            |%0.2f\nAvg Positive Jitter|%0.2f               |%0.2f                |%0.2f                |%0.2f            |%0.2f\nAvg Negative Jitter|%0.2f                |%0.2f                |%0.2f             |%0.2f              |%0.2f\n", avg_execution_camera_capture, avg_execution_shape_detect, avg_execution_shape_verify, avg_execution_audio, avg_execution_led_mat, avg_jitter_camera_capture, avg_jitter_shape_detect, avg_jitter_shape_verify, avg_jitter_audio, avg_jitter_led_mat, avg_pjitter_camera_capture, avg_pjitter_shape_detect, avg_pjitter_shape_verify, avg_pjitter_audio,avg_pjitter_led_mat, avg_njitter_camera_capture, avg_njitter_shape_detect, avg_njitter_shape_verify, avg_njitter_audio, avg_njitter_led_mat); 
    
   /* Destory the created semaphores */
   sem_destroy(&service_camera_cap_sig);

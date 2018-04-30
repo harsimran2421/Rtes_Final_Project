@@ -507,7 +507,7 @@ void set_thread_attr(void)
     pthread_attr_init(&audio_attr); 
     pthread_attr_setinheritsched(&audio_attr, PTHREAD_EXPLICIT_SCHED); 
     pthread_attr_setschedpolicy(&audio_attr, SCHED_FIFO); 
-    audio_thread_param.sched_priority = prio_Max; 
+    audio_thread_param.sched_priority =  prio_Max; 
     pthread_attr_setschedparam(&audio_attr, &audio_thread_param); 
     
     pthread_attr_init(&led_mat_attr); 
