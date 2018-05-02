@@ -1,7 +1,29 @@
+/** 
+ * @file: profiling_functions.c 
+ * @Authors: Arundhathi Swami, Harsimransingh Bindra & Vidur Sarin
+ * @Version 0.1
+ *
+ * @section LICENSE 
+ *  
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * @section DESCRIPTION
+ * 
+ * This file contains the definitions of most of the functions that are critical to profile the 
+ * program and all the services that are a part of it. Moreover, it also contains definitions for the following:
+ *  - Thread specific settings and functions 
+ *  - Definitions for all the threads and their computations 
+ *  - Audio and LED Matrix specific functions and tasks
+ */
 #include "header_files.h"
-//#include "shape_detect_profiling.h"
 
-bool verified = false;
+/** 
+ * @brief
+ * Basic enum to list the valid shapes that are detected by the system
+ */
 typedef enum __detect_shape_e {
   SHAPE_RECT = 10,
   SHAPE_TRI = 20,
@@ -12,10 +34,8 @@ typedef enum __detect_shape_e {
 } detect_shape_e;
 detect_shape_e shape = SHAPE_CIRCLE;
 
-/***********************************************
-Function to calculate time difference for profiling
-Code Credit: Prof. Sam Siewert  
-***********************************************/
+bool verified = false;
+
 int delta_time(struct timespec* stop, struct timespec* start, struct timespec* delta)
 {
     int delta_sec = stop->tv_sec - start->tv_sec;
@@ -131,7 +151,6 @@ void printnumber(int i)
   //delay(50);
 }
 
-#if 1
 void *camera_capture(void *args)
 {
 
@@ -482,7 +501,6 @@ void *audio_output(void *params)
   }
   return NULL;
 }
-#endif
 
 void set_thread_attr(void)
 {

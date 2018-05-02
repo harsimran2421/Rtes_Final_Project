@@ -1,24 +1,36 @@
-/**
- * Simple shape detector program.
- * It loads an image and tries to find simple shapes (rectangle, triangle, circle, etc) in it.
- * This program is a modified version of `squares.cpp` found in the OpenCV sample dir.
+/** 
+ * @file: shape_detect_profiling.c 
+ * @Authors: Arundhathi Swami, Harsimransingh Bindra & Vidur Sarin
+ * @Version 0.1
+ *
+ * @section LICENSE 
+ *  
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * @section DESCRIPTION
+ * This is the basic file for the program and it only contains the main service and the system handler. 
  */
-
 #include "shape_detect_profiling.h"
 
-#if 0
-
-#endif
-
-
+/**
+ * @brief
+ * Signal handler to kill the program midway and handle the memory cleanup
+ */
 void intHandler(int dummy) {
   cout<<"Signal Handler Caught!"<<endl;  
   exit(0);
 }
 
+/**
+ * @brief
+ * This the main task that starts off all the services and then waits for them to terminate.
+ * It also initializes the sermaphores and destroys them properly before exiting the program
+ */
 int main(int argc, char **argv)
 {
-
   signal(SIGINT, intHandler);
   
   prio_Max = sched_get_priority_max(SCHED_FIFO); 

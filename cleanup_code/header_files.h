@@ -1,3 +1,21 @@
+/** 
+ * @file: header_file.h
+ * @Authors: Arundhathi Swami, Harsimransingh Bindra & Vidur Sarin
+ * @Version 0.1
+ *
+ * @section LICENSE 
+ *  
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * @section DESCRIPTION
+ *
+ * This is the basic header file for the shape detection and profiling program.
+ * It contain all the included headers(.h files) and basic extern declarations for all the variables used.
+ */
+
 #include <opencv2/highgui/highgui.hpp>
 
 #include <opencv2/imgproc/imgproc.hpp>
