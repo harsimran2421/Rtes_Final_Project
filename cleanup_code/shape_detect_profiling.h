@@ -3,8 +3,7 @@
  * @Authors: Arundhathi Swami, Harsimransingh Bindra & Vidur Sarin
  * @Version 0.1
  *
- * @section LICENSE 
- *  
+ * \copyright  
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of
@@ -15,6 +14,11 @@
  * This is the basic header file for the shape detection and profiling program.
  * It contain all the global variables and arrays used by the program along with prototype 
  * declarations for all the functions.
+ *
+ * @section REFERENCES
+ *  Shape Detection: https://github.com/bsdnoobz/opencv-code/blob/master/shape-detect.cpp
+ *  GPIO and LED Matrix Wiring: https://github.com/WiringPi/WiringPi/blob/master/wiringPi/wiringPiSPI.c
+ *
  */
 #include "header_files.h"
 

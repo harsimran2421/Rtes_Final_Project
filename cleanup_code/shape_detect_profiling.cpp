@@ -1,10 +1,21 @@
+/*!
+ * \mainpage Shape Detection via OpenCV
+ * The aim of this project is to create an educational aid comprised of a camera-enabled interactive embedded system that uses shape recognition software and provides an engaging output in the form of both audio and video in a short span of time to ensure attention spans are maintained.
+ *
+ * This system runs 5 task which are:
+ *  - Frame Capture
+ *  - Shape Identificaion
+ *  - Shape Verification
+ *  - Matrix Display
+ *  - Audio Service
+ */
+
 /** 
  * @file: shape_detect_profiling.c 
  * @Authors: Arundhathi Swami, Harsimransingh Bindra & Vidur Sarin
  * @Version 0.1
  *
- * @section LICENSE 
- *  
+ * \copyright 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of
@@ -12,6 +23,11 @@
  *
  * @section DESCRIPTION
  * This is the basic file for the program and it only contains the main service and the system handler. 
+ *
+ * @section REFERENCES
+ *  Shape Detection: https://github.com/bsdnoobz/opencv-code/blob/master/shape-detect.cpp
+ *  GPIO and LED Matrix Wiring: https://github.com/WiringPi/WiringPi/blob/master/wiringPi/wiringPiSPI.c
+ *
  */
 #include "shape_detect_profiling.h"
 
