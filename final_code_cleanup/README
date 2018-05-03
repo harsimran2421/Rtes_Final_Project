@@ -1,0 +1,6 @@
+## Create the doxygen files and folders
+
+to create the doxygen html reference, run the following command:
+
+  doxygen Doxyfile
+
